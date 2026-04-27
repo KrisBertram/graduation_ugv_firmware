@@ -1,0 +1,58 @@
+# AURIX Development Studio / Eclipse CDT build outputs
+/Debug/
+/Release/
+/build/
+/Build/
+/Objects/
+/Listings/
+/*.launch
+
+# Generated dependency, object, listing, binary, and map files
+*.d
+*.o
+*.obj
+*.a
+*.lib
+*.elf
+*.hex
+*.bin
+*.map
+*.lst
+*.lss
+*.srec
+*.mot
+*.out
+*.axf
+*.mdf
+
+# Required prebuilt library referenced by .cproject
+!libraries/zf_device/zf_device_config.a
+
+# PlatformIO / Arduino / ESP-IDF style generated folders if the project is reused
+/.pio/
+/.pioenvs/
+/.piolibdeps/
+/managed_components/
+/dependencies.lock
+
+# Editor and OS cache files
+/.vscode/
+/.idea/
+*.swp
+*.swo
+*~
+Thumbs.db
+Desktop.ini
+
+# Logs and temporary files
+*.log
+*.tmp
+*.bak
+*.orig
+
+# Optional local-only secrets or machine-specific overrides
+*.local.h
+*.local.c
+*.local.mk
+.env
+.env.*

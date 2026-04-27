@@ -1,0 +1,20 @@
+# Keep cross-platform line endings predictable.
+* text=auto
+
+*.c        text eol=lf
+*.h        text eol=lf
+*.md       text eol=lf
+*.py       text eol=lf
+*.lsl      text eol=lf
+*.project  text eol=lf
+*.cproject text eol=lf
+*.prefs    text eol=lf
+*.bat      text eol=crlf
+
+*.a        binary
+*.png      binary
+*.jpg      binary
+*.jpeg     binary
+*.gif      binary
+*.ico      binary
+*.pdf      binary
