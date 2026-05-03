@@ -5,6 +5,7 @@
 #include "mmath.h"
 #include "wifi.h"
 #include "gui.h"
+#include "path_follow.h"
 #pragma section all "cpu1_dsram"
 
 void core1_main(void)
@@ -25,10 +26,25 @@ void core1_main(void)
         {
             key_scan_flag = 0;
 
+            KeyEvent_t kev1 = keyScan(&key[0]);
+            KeyEvent_t kev2 = keyScan(&key[1]);
             KeyEvent_t kev3 = keyScan(&key[2]);
+            KeyEvent_t kev4 = keyScan(&key[3]);
             KeyEvent_t kev6 = keyScan(&key[5]);
             KeyEvent_t kev9 = keyScan(&key[8]);
             KeyEvent_t kev12 = keyScan(&key[11]);
+
+            if(kev1 == KEY_SHORT) // 选择上一条预置轨迹
+            {
+                if (pathFollowerSelectPrev()) buzzerBeep(BUZZER_S);
+                else buzzerBeep(BUZZER_LSS);
+            }
+
+            if(kev2 == KEY_SHORT) // 选择下一条预置轨迹
+            {
+                if (pathFollowerSelectNext()) buzzerBeep(BUZZER_S);
+                else buzzerBeep(BUZZER_LSS);
+            }
 
             if(kev3 == KEY_SHORT) // WiFi 请求连接
             {
@@ -72,20 +88,37 @@ void core1_main(void)
                 if (atk_mw8266d_ready() && atk_mw8266d_info.isSerianet) buzzerBeep(BUZZER_FAST); // 指示 WiFi 成功连接
             }
 
-            if(kev6 == KEY_SHORT)
+            if(kev4 == KEY_SHORT) // 启停当前预置轨迹
+            {
+                if (pathFollowerIsRunning())
+                {
+                    pathFollowerStop();
+                    buzzerBeep(BUZZER_SS);
+                }
+                else if (!rc_enable_flag && pathFollowerStart(&carPose))
+                {
+                    buzzerBeep(BUZZER_S);
+                }
+                else
+                {
+                    buzzerBeep(BUZZER_LSS);
+                }
+            }
+
+            if(!pathFollowerIsRunning() && kev6 == KEY_SHORT)
             {
                 steer_duty += 25;
             }
-            else if(kev6 == KEY_LONG)
+            else if(!pathFollowerIsRunning() && kev6 == KEY_LONG)
             {
                 steer_duty += 100;
             }
 
-            if(kev9 == KEY_SHORT)
+            if(!pathFollowerIsRunning() && kev9 == KEY_SHORT)
             {
                 steer_duty -= 25;
             }
-            else if(kev9 == KEY_LONG)
+            else if(!pathFollowerIsRunning() && kev9 == KEY_LONG)
             {
                 steer_duty -= 100;
             }
@@ -109,6 +142,7 @@ void core1_main(void)
 
         if (rc_enable_flag) // 如果遥控器使能
         {
+            if (pathFollowerIsRunning()) pathFollowerStop(); // 遥控器接管最高优先级，自动控制必须退出
             motor_duty = (float)mapTri(x6f_channel[1].out, 125, 174, 200, -18, 0, 18);
             steer_duty = (float)mapTri(x6f_channel[0].out, 139, 150, 162, STEER_DUTY_R, STEER_DUTY_M, STEER_DUTY_L);
         }

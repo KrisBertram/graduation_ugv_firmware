@@ -7,6 +7,7 @@
 #include "wifi_packet.h"
 #include "ins.h"
 #include "gui.h"
+#include "path_follow.h"
 #pragma section all "cpu2_dsram"
 
 void core2_main(void)
@@ -83,26 +84,30 @@ void core2_main(void)
 
         uint16 y = 0;
 
-        //--------- 加速度 ---------
-        ips200_show_string(0, y, "ax");  ips200_show_float(60, y, imu_dat.ax, 8, 4);  y+=16;
-        ips200_show_string(0, y, "ay");  ips200_show_float(60, y, imu_dat.ay, 8, 4);  y+=16;
-        ips200_show_string(0, y, "az");  ips200_show_float(60, y, imu_dat.az, 8, 4);  y+=16;
+        //--------- 轨迹跟踪调试 ---------
+        ips200_show_string(0, y, "traj");   ips200_show_uint(60, y, (uint32)pathFollower.selected_index, 4); y+=16;
+        ips200_show_string(0, y, "status"); ips200_show_uint(60, y, (uint32)pathFollower.status, 4);         y+=16;
+        ips200_show_string(0, y, "near");   ips200_show_uint(60, y, (uint32)pathFollower.nearest_index, 6);  y+=16;
+        ips200_show_string(0, y, "target"); ips200_show_uint(60, y, (uint32)pathFollower.target_index, 6);   y+=16;
+        ips200_show_string(0, y, "e_y");    ips200_show_float(60, y, pathFollower.e_y, 8, 4);                   y+=16;
+        ips200_show_string(0, y, "e_yaw");  ips200_show_float(60, y, pathFollower.e_yaw, 8, 4);                 y+=16;
+        ips200_show_string(0, y, "v_ref");  ips200_show_float(60, y, pathFollower.v_ref, 8, 4);                 y+=16;
+        ips200_show_string(0, y, "remain"); ips200_show_float(60, y, pathFollower.remaining_s, 8, 4);           y+=16;
+        ips200_show_string(0, y, "motor");  ips200_show_float(60, y, motor_duty, 8, 3);                         y+=16;
+        ips200_show_string(0, y, "steer");  ips200_show_float(60, y, steer_duty, 8, 2);                         y+=16;
 
-        //--------- 陀螺仪 ---------
-        ips200_show_string(0, y, "gx");  ips200_show_float(60, y, imu_dat.gx, 8, 4);  y+=16;
-        ips200_show_string(0, y, "gy");  ips200_show_float(60, y, imu_dat.gy, 8, 4);  y+=16;
-        ips200_show_string(0, y, "gz");  ips200_show_float(60, y, imu_dat.gz, 8, 4);  y+=16;
+        //--------- 航位解算 ---------
+        ips200_show_string(0, y, "odom x");   ips200_show_float(80, y, carPose.x, 8, 4);        y+=16;
+        ips200_show_string(0, y, "odom y");   ips200_show_float(80, y, carPose.y, 8, 4);        y+=16;
+        ips200_show_string(0, y, "odom yaw"); ips200_show_float(80, y, carPose.yaw_deg, 8, 3);  y+=16;
+        ips200_show_string(0, y, "speed");    ips200_show_float(80, y, encoder_v, 8, 4);        y+=16;
+        ips200_show_string(0, y, "imu yaw");  ips200_show_float(80, y, imu_dat.yaw, 8, 3);      y+=16;
 
-        //--------- 四元数 ---------
+//        //--------- 四元数 ---------
 //        ips200_show_string(0, y, "Q0");  ips200_show_float(60, y, imu_dat.Q0, 8, 4);  y+=16;
 //        ips200_show_string(0, y, "Q1");  ips200_show_float(60, y, imu_dat.Q1, 8, 4);  y+=16;
 //        ips200_show_string(0, y, "Q2");  ips200_show_float(60, y, imu_dat.Q2, 8, 4);  y+=16;
 //        ips200_show_string(0, y, "Q3");  ips200_show_float(60, y, imu_dat.Q3, 8, 4);  y+=16;
-
-        //--------- 欧拉角 ---------
-        ips200_show_string(0, y, "roll");  ips200_show_float(60, y, imu_dat.roll, 8, 3);  y+=16;
-        ips200_show_string(0, y, "pitch"); ips200_show_float(60, y, imu_dat.pitch, 8, 3); y+=16;
-        ips200_show_string(0, y, "yaw");   ips200_show_float(60, y, imu_dat.yaw, 8, 3);   y+=16;
 
         //--------- 时间 ---------
 //        char buf[32];
@@ -111,16 +116,6 @@ void core2_main(void)
 //
 //        snprintf(buf, sizeof(buf), "%d:%d:%d.%d", imu_dat.hh, imu_dat.mn, imu_dat.ss, imu_dat.ms);
 //        ips200_show_string(0, y, "Time");  ips200_show_string(60, y, buf);  y+=16;
-
-        //--------- 航位解算 ---------
-        ips200_show_string(0, y, "odom x");   ips200_show_float(80, y, carPose.x, 8, 4);        y+=16;
-        ips200_show_string(0, y, "odom y");   ips200_show_float(80, y, carPose.y, 8, 4);        y+=16;
-        ips200_show_string(0, y, "odom yaw"); ips200_show_float(80, y, carPose.yaw_deg, 8, 3);  y+=16;
-        ips200_show_string(0, y, "dist");     ips200_show_float(80, y, carPose.distance, 8, 4); y+=16;
-
-        ips200_show_string(0, y, "encoder_v"); ips200_show_float(80, y, encoder_v, 8, 4); y+=16;
-        ips200_show_string(0, y, "steer"); ips200_show_float(80, y, steer_duty, 8, 4); y+=16;
-
 
 //        /* 下行数据包数据 */
 //        uint16 y = 0;

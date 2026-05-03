@@ -8,6 +8,7 @@
 #include "wifi_packet.h"
 #include "ins.h"
 #include "gui.h"
+#include "path_follow.h"
 #pragma section all "cpu0_dsram"
 
 int core0_main(void)
@@ -152,6 +153,9 @@ int core0_main(void)
 
                 /* 编码器速度 + 舵机角 + 陀螺 Z 轴 + AHRS 航向角互补融合，更新小车全局位姿 */
                 carPoseUpdate(&carPose, encoder_v, steer_duty, imu_dat.gz, imu_dat.yaw, dt);
+
+                /* 自动轨迹跟踪只在主循环里更新控制量，不在中断里做复杂浮点控制 */
+                pathFollowerUpdate(&carPose, dt, rc_enable_flag);
             }
 
             hwtUpdate = (uint8)(hwtUpdate & (uint8)(~update_flags));
