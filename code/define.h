@@ -94,7 +94,7 @@
 
 #define WIFI_SSID       ("uavap_tsang")     // WiFi SSID
 #define WIFI_PASSWORD   ("888888887")       // WiFi 密码
-#define TCP_SERVER_IP   ("10.190.49.61")    // TCP 服务器 IP
+#define TCP_SERVER_IP   ("10.105.26.51")    // TCP 服务器 IP
 #define TCP_SERVER_PORT ("5001")            // TCP 服务器端口
 
 #endif /* CODE_DEFINE_H_ */
