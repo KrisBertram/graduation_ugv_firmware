@@ -51,6 +51,7 @@ typedef struct {
     const TrajectoryControlPoint_t *points;  // 控制点数组
     uint8 count;                             // 控制点数量
     const char *name;                        // 调试显示用轨迹名，建议仅使用 ASCII
+    const char *desc;                        // 菜单信息栏显示用说明，建议仅使用 ASCII
 } TrajectoryPreset_t;
 
 uint8 trajectoryGetPresetCount(void);

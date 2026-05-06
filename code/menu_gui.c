@@ -14,13 +14,21 @@
 #define MENU_COLS                       (30u)
 #define MENU_ROWS                       (20u)
 #define MENU_BODY_FIRST_ROW             (1u)
-#define MENU_BODY_LAST_ROW              (18u)
+#define MENU_BODY_LAST_ROW              (13u)
+#define MENU_INFO_TITLE_ROW             (14u)
+#define MENU_INFO_FIRST_ROW             (15u)
+#define MENU_INFO_LAST_ROW              (18u)
+#define MENU_INFO_TEXT_COL              (1u)
+#define MENU_INFO_TEXT_COLS             (28u)
+#define MENU_INFO_TITLE_COL             (1u)
+#define MENU_INFO_TITLE_COLS            (13u)
 #define MENU_FOOTER_ROW                 (19u)
 #define MENU_ROW_H                      (16u)
 #define MENU_VALUE_COL                  (15u)
 #define MENU_LABEL_COLS                 (14u)
 #define MENU_MESSAGE_TICKS              (180u)
 #define MENU_NUMERIC_BUF_LEN            (14u)
+#define MENU_DESC_BUF_LEN               (160u)
 
 #define MENU_COLOR_BG                   (RGB565_BLACK)
 #define MENU_COLOR_FG                   (RGB565_WHITE)
@@ -153,6 +161,12 @@ typedef enum {
 
 typedef struct {
     const char *name;
+    const char *desc;
+} MenuTextItem_t;
+
+typedef struct {
+    const char *name;
+    const char *desc;
     MenuValueType_t type;
     MenuValueId_t id;
     uint8 decimals;
@@ -166,6 +180,7 @@ typedef enum {
 
 typedef struct {
     const char *name;
+    const char *desc;
     volatile float *value;
     float min_value;
     float max_value;
@@ -176,163 +191,165 @@ typedef struct {
 
 typedef struct {
     const char *name;
+    const char *desc;
     const ParamItem_t *items;
     uint8 count;
 } ParamCategoryInfo_t;
 
 typedef struct {
     const char *name;
+    const char *desc;
     const TuneItem_t *items;
     uint8 count;
 } TuneCategoryInfo_t;
 
-static const char *main_items[] = {
-    "Params",
-    "Tune",
-    "Trajectory",
-    "System"
+static const MenuTextItem_t main_items[] = {
+    { "Params",     "View live vehicle IMU path and WiFi parameters" },
+    { "Tune",       "Adjust RAM only path following tuning parameters" },
+    { "Trajectory", "Select start stop and preview preset trajectories" },
+    { "System",     "Run WiFi IMU stop reset and steering actions" }
 };
 
 static const ParamItem_t params_odom[] = {
-    { "x m",             MVAL_FLOAT, VID_CAR_X,           3 },
-    { "y m",             MVAL_FLOAT, VID_CAR_Y,           3 },
-    { "yaw deg",         MVAL_FLOAT, VID_CAR_YAW_DEG,     2 },
-    { "yaw rad",         MVAL_FLOAT, VID_CAR_YAW_RAD,     3 },
-    { "vx mps",          MVAL_FLOAT, VID_CAR_VX,          3 },
-    { "vy mps",          MVAL_FLOAT, VID_CAR_VY,          3 },
-    { "speed mps",       MVAL_FLOAT, VID_CAR_SPEED,       3 },
-    { "distance m",      MVAL_FLOAT, VID_CAR_DISTANCE,    3 },
-    { "yaw rate",        MVAL_FLOAT, VID_CAR_YAW_RATE,    3 },
-    { "steer angle",     MVAL_FLOAT, VID_CAR_STEER_ANGLE, 3 },
-    { "gyro bias",       MVAL_FLOAT, VID_CAR_GYRO_BIAS,   4 },
-    { "pose ready",      MVAL_BOOL,  VID_CAR_READY,       0 }
+    { "x m",          "Estimated global X position in meters",                MVAL_FLOAT, VID_CAR_X,           3 },
+    { "y m",          "Estimated global Y position in meters",                MVAL_FLOAT, VID_CAR_Y,           3 },
+    { "yaw deg",      "Estimated heading angle in degrees",                   MVAL_FLOAT, VID_CAR_YAW_DEG,     2 },
+    { "yaw rad",      "Estimated heading angle in radians",                   MVAL_FLOAT, VID_CAR_YAW_RAD,     3 },
+    { "vx mps",       "Estimated velocity along global X in m/s",             MVAL_FLOAT, VID_CAR_VX,          3 },
+    { "vy mps",       "Estimated velocity along global Y in m/s",             MVAL_FLOAT, VID_CAR_VY,          3 },
+    { "speed mps",    "Forward vehicle speed from encoder and odometry",      MVAL_FLOAT, VID_CAR_SPEED,       3 },
+    { "distance m",   "Integrated travel distance since odometry start",      MVAL_FLOAT, VID_CAR_DISTANCE,    3 },
+    { "yaw rate",     "Current yaw angular velocity used by odometry",        MVAL_FLOAT, VID_CAR_YAW_RATE,    3 },
+    { "steer angle",  "Estimated front wheel steering angle",                 MVAL_FLOAT, VID_CAR_STEER_ANGLE, 3 },
+    { "gyro bias",    "Gyro Z bias captured during IMU zeroing",              MVAL_FLOAT, VID_CAR_GYRO_BIAS,   4 },
+    { "pose ready",   "Odometry ready flag after pose initialization",         MVAL_BOOL,  VID_CAR_READY,       0 }
 };
 
 static const ParamItem_t params_imu[] = {
-    { "roll deg",        MVAL_FLOAT, VID_IMU_ROLL,        2 },
-    { "pitch deg",       MVAL_FLOAT, VID_IMU_PITCH,       2 },
-    { "yaw deg",         MVAL_FLOAT, VID_IMU_YAW,         2 },
-    { "gx dps",          MVAL_FLOAT, VID_IMU_GX,          2 },
-    { "gy dps",          MVAL_FLOAT, VID_IMU_GY,          2 },
-    { "gz dps",          MVAL_FLOAT, VID_IMU_GZ,          2 },
-    { "ax g",            MVAL_FLOAT, VID_IMU_AX,          3 },
-    { "ay g",            MVAL_FLOAT, VID_IMU_AY,          3 },
-    { "az g",            MVAL_FLOAT, VID_IMU_AZ,          3 },
-    { "Q0",              MVAL_FLOAT, VID_IMU_Q0,          4 },
-    { "Q1",              MVAL_FLOAT, VID_IMU_Q1,          4 },
-    { "Q2",              MVAL_FLOAT, VID_IMU_Q2,          4 },
-    { "Q3",              MVAL_FLOAT, VID_IMU_Q3,          4 },
-    { "hour",            MVAL_UINT,  VID_IMU_HOUR,        0 },
-    { "minute",          MVAL_UINT,  VID_IMU_MIN,         0 },
-    { "second",          MVAL_UINT,  VID_IMU_SEC,         0 },
-    { "ms",              MVAL_UINT,  VID_IMU_MS,          0 }
+    { "roll deg",     "HWT606 roll angle in degrees",                          MVAL_FLOAT, VID_IMU_ROLL,        2 },
+    { "pitch deg",    "HWT606 pitch angle in degrees",                         MVAL_FLOAT, VID_IMU_PITCH,       2 },
+    { "yaw deg",      "HWT606 yaw angle after local zeroing",                   MVAL_FLOAT, VID_IMU_YAW,         2 },
+    { "gx dps",       "Gyroscope X angular rate in deg/s",                     MVAL_FLOAT, VID_IMU_GX,          2 },
+    { "gy dps",       "Gyroscope Y angular rate in deg/s",                     MVAL_FLOAT, VID_IMU_GY,          2 },
+    { "gz dps",       "Gyroscope Z angular rate in deg/s",                     MVAL_FLOAT, VID_IMU_GZ,          2 },
+    { "ax g",         "Accelerometer X acceleration in g",                     MVAL_FLOAT, VID_IMU_AX,          3 },
+    { "ay g",         "Accelerometer Y acceleration in g",                     MVAL_FLOAT, VID_IMU_AY,          3 },
+    { "az g",         "Accelerometer Z acceleration in g",                     MVAL_FLOAT, VID_IMU_AZ,          3 },
+    { "Q0",           "Quaternion q0 from the IMU attitude solution",          MVAL_FLOAT, VID_IMU_Q0,          4 },
+    { "Q1",           "Quaternion q1 from the IMU attitude solution",          MVAL_FLOAT, VID_IMU_Q1,          4 },
+    { "Q2",           "Quaternion q2 from the IMU attitude solution",          MVAL_FLOAT, VID_IMU_Q2,          4 },
+    { "Q3",           "Quaternion q3 from the IMU attitude solution",          MVAL_FLOAT, VID_IMU_Q3,          4 },
+    { "hour",         "Hour field from the IMU time register",                 MVAL_UINT,  VID_IMU_HOUR,        0 },
+    { "minute",       "Minute field from the IMU time register",               MVAL_UINT,  VID_IMU_MIN,         0 },
+    { "second",       "Second field from the IMU time register",               MVAL_UINT,  VID_IMU_SEC,         0 },
+    { "ms",           "Millisecond field from the IMU time register",          MVAL_UINT,  VID_IMU_MS,          0 }
 };
 
 static const ParamItem_t params_motion[] = {
-    { "encoder pulse",   MVAL_INT,   VID_ENCODER_PULSE,  0 },
-    { "encoder v",       MVAL_FLOAT, VID_ENCODER_V,      3 },
-    { "motor duty",      MVAL_FLOAT, VID_MOTOR_DUTY,     2 },
-    { "steer duty",      MVAL_FLOAT, VID_STEER_DUTY,     1 },
-    { "rc enable",       MVAL_BOOL,  VID_RC_ENABLE,      0 },
-    { "x6f ch1",         MVAL_INT,   VID_X6F_CH1,        0 },
-    { "x6f ch2",         MVAL_INT,   VID_X6F_CH2,        0 },
-    { "x6f ch3",         MVAL_INT,   VID_X6F_CH3,        0 },
-    { "x6f ch4",         MVAL_INT,   VID_X6F_CH4,        0 },
-    { "x6f ch5",         MVAL_INT,   VID_X6F_CH5,        0 },
-    { "x6f ch6",         MVAL_INT,   VID_X6F_CH6,        0 }
+    { "encoder pulse", "Raw encoder pulse count sampled by motion task",       MVAL_INT,   VID_ENCODER_PULSE,  0 },
+    { "encoder v",     "Encoder derived vehicle speed in m/s",                 MVAL_FLOAT, VID_ENCODER_V,      3 },
+    { "motor duty",    "Current motor duty command",                           MVAL_FLOAT, VID_MOTOR_DUTY,     2 },
+    { "steer duty",    "Current steering servo duty command",                  MVAL_FLOAT, VID_STEER_DUTY,     1 },
+    { "rc enable",     "Remote control takeover enable flag",                  MVAL_BOOL,  VID_RC_ENABLE,      0 },
+    { "x6f ch1",       "X6F channel 1 high level count for steering",          MVAL_INT,   VID_X6F_CH1,        0 },
+    { "x6f ch2",       "X6F channel 2 high level count for throttle",          MVAL_INT,   VID_X6F_CH2,        0 },
+    { "x6f ch3",       "X6F channel 3 high level count for RC enable",         MVAL_INT,   VID_X6F_CH3,        0 },
+    { "x6f ch4",       "X6F channel 4 high level count for mode switch",       MVAL_INT,   VID_X6F_CH4,        0 },
+    { "x6f ch5",       "X6F channel 5 high level count",                       MVAL_INT,   VID_X6F_CH5,        0 },
+    { "x6f ch6",       "X6F channel 6 high level count",                       MVAL_INT,   VID_X6F_CH6,        0 }
 };
 
 static const ParamItem_t params_path[] = {
-    { "selected",        MVAL_UINT,  VID_PATH_SELECTED,     0 },
-    { "active",          MVAL_UINT,  VID_PATH_ACTIVE,       0 },
-    { "status",          MVAL_TEXT,  VID_PATH_STATUS,       0 },
-    { "nearest",         MVAL_UINT,  VID_PATH_NEAREST,      0 },
-    { "target",          MVAL_UINT,  VID_PATH_TARGET,       0 },
-    { "e_y m",           MVAL_FLOAT, VID_PATH_EY,           3 },
-    { "e_yaw rad",       MVAL_FLOAT, VID_PATH_EYAW,         3 },
-    { "e_y der",         MVAL_FLOAT, VID_PATH_EY_D,         3 },
-    { "lat integral",    MVAL_FLOAT, VID_PATH_LAT_I,        3 },
-    { "lookahead",       MVAL_FLOAT, VID_PATH_LOOKAHEAD,    3 },
-    { "kappa pp",        MVAL_FLOAT, VID_PATH_KAPPA,        3 },
-    { "steer offset",    MVAL_FLOAT, VID_PATH_STEER_OFFSET, 2 },
-    { "steer cmd",       MVAL_FLOAT, VID_PATH_STEER_CMD,    1 },
-    { "v ref",           MVAL_FLOAT, VID_PATH_VREF,         3 },
-    { "speed err",       MVAL_FLOAT, VID_PATH_SPEED_ERR,    3 },
-    { "speed int",       MVAL_FLOAT, VID_PATH_SPEED_I,      3 },
-    { "remain m",        MVAL_FLOAT, VID_PATH_REMAIN,       3 }
+    { "selected",     "Preset trajectory index selected in the menu",          MVAL_UINT,  VID_PATH_SELECTED,     0 },
+    { "active",       "Trajectory index currently built for following",        MVAL_UINT,  VID_PATH_ACTIVE,       0 },
+    { "status",       "Path follower state machine status",                    MVAL_TEXT,  VID_PATH_STATUS,       0 },
+    { "nearest",      "Nearest active trajectory point index",                 MVAL_UINT,  VID_PATH_NEAREST,      0 },
+    { "target",       "Pure pursuit lookahead target point index",             MVAL_UINT,  VID_PATH_TARGET,       0 },
+    { "e_y m",        "Signed lateral path error in meters",                   MVAL_FLOAT, VID_PATH_EY,           3 },
+    { "e_yaw rad",    "Heading error between vehicle and path tangent",        MVAL_FLOAT, VID_PATH_EYAW,         3 },
+    { "e_y der",      "Derivative of lateral error for steering damping",      MVAL_FLOAT, VID_PATH_EY_D,         3 },
+    { "lat integral", "Integrated lateral error after limiting",               MVAL_FLOAT, VID_PATH_LAT_I,        3 },
+    { "lookahead",    "Dynamic lookahead distance used by pure pursuit",       MVAL_FLOAT, VID_PATH_LOOKAHEAD,    3 },
+    { "kappa pp",     "Pure pursuit curvature command before duty gain",       MVAL_FLOAT, VID_PATH_KAPPA,        3 },
+    { "steer offset", "Steering duty offset from path controller",             MVAL_FLOAT, VID_PATH_STEER_OFFSET, 2 },
+    { "steer cmd",    "Final steering duty command sent to servo",             MVAL_FLOAT, VID_PATH_STEER_CMD,    1 },
+    { "v ref",        "Reference speed selected by path constraints",          MVAL_FLOAT, VID_PATH_VREF,         3 },
+    { "speed err",    "Difference between reference and measured speed",       MVAL_FLOAT, VID_PATH_SPEED_ERR,    3 },
+    { "speed int",    "Speed PI integral accumulator after limiting",          MVAL_FLOAT, VID_PATH_SPEED_I,      3 },
+    { "remain m",     "Estimated remaining distance along active trajectory",  MVAL_FLOAT, VID_PATH_REMAIN,       3 }
 };
 
 static const ParamItem_t params_wifi[] = {
-    { "power",           MVAL_BOOL,  VID_WIFI_POWER,     0 },
-    { "mode set",        MVAL_BOOL,  VID_WIFI_MODE,      0 },
-    { "wifi conn",       MVAL_BOOL,  VID_WIFI_CONN,      0 },
-    { "tcp conn",        MVAL_BOOL,  VID_TCP_CONN,       0 },
-    { "transparent",     MVAL_BOOL,  VID_SERIANET,       0 },
-    { "rx finish",       MVAL_BOOL,  VID_RX_FINISH,      0 },
-    { "rx len",          MVAL_UINT,  VID_RX_LEN,         0 },
-    { "recv speed",      MVAL_FLOAT, VID_RECV_SPEED,     3 },
-    { "recv yaw",        MVAL_FLOAT, VID_RECV_YAW,       2 },
-    { "recv pitch",      MVAL_FLOAT, VID_RECV_PITCH,     2 },
-    { "recv roll",       MVAL_FLOAT, VID_RECV_ROLL,      2 },
-    { "recv dist",       MVAL_FLOAT, VID_RECV_DIST,      3 },
-    { "recv action",     MVAL_UINT,  VID_RECV_ACTION,    0 }
+    { "power",        "WiFi module power or initialization state",             MVAL_BOOL,  VID_WIFI_POWER,     0 },
+    { "mode set",     "ESP8266 STA mode configuration state",                  MVAL_BOOL,  VID_WIFI_MODE,      0 },
+    { "wifi conn",    "WiFi access point connection state",                    MVAL_BOOL,  VID_WIFI_CONN,      0 },
+    { "tcp conn",     "TCP server connection state",                           MVAL_BOOL,  VID_TCP_CONN,       0 },
+    { "transparent",  "Transparent serial network mode state",                 MVAL_BOOL,  VID_SERIANET,       0 },
+    { "rx finish",    "Whether the last downlink packet finished parsing",     MVAL_BOOL,  VID_RX_FINISH,      0 },
+    { "rx len",       "Length of the last received downlink payload",          MVAL_UINT,  VID_RX_LEN,         0 },
+    { "recv speed",   "Last received speed field from WiFi packet",            MVAL_FLOAT, VID_RECV_SPEED,     3 },
+    { "recv yaw",     "Last received yaw field from WiFi packet",              MVAL_FLOAT, VID_RECV_YAW,       2 },
+    { "recv pitch",   "Last received pitch field from WiFi packet",            MVAL_FLOAT, VID_RECV_PITCH,     2 },
+    { "recv roll",    "Last received roll field from WiFi packet",             MVAL_FLOAT, VID_RECV_ROLL,      2 },
+    { "recv dist",    "Last received distance field from WiFi packet",         MVAL_FLOAT, VID_RECV_DIST,      3 },
+    { "recv action",  "Last received action command from WiFi packet",         MVAL_UINT,  VID_RECV_ACTION,    0 }
 };
 
 static const ParamCategoryInfo_t param_categories[PARAM_CAT_COUNT] = {
-    { "Odom/INS",  params_odom,   (uint8)ARRAY_SIZE(params_odom)   },
-    { "IMU",       params_imu,    (uint8)ARRAY_SIZE(params_imu)    },
-    { "Motion/RC", params_motion, (uint8)ARRAY_SIZE(params_motion) },
-    { "Path",      params_path,   (uint8)ARRAY_SIZE(params_path)   },
-    { "WiFi/RX",   params_wifi,   (uint8)ARRAY_SIZE(params_wifi)   }
+    { "Odom/INS",  "Pose speed distance yaw rate and steering estimates",       params_odom,   (uint8)ARRAY_SIZE(params_odom)   },
+    { "IMU",       "Raw HWT606 attitude gyro accel quaternion and time",        params_imu,    (uint8)ARRAY_SIZE(params_imu)    },
+    { "Motion/RC", "Encoder motor servo RC enable and receiver channels",       params_motion, (uint8)ARRAY_SIZE(params_motion) },
+    { "Path",      "Path follower state errors commands and speed values",      params_path,   (uint8)ARRAY_SIZE(params_path)   },
+    { "WiFi/RX",   "WiFi TCP states and last received packet values",           params_wifi,   (uint8)ARRAY_SIZE(params_wifi)   }
 };
 
 static const TuneItem_t tune_safety[] = {
-    { "start max m",  &pathFollowConfig.start_max_dist_m,  0.05f, 1.50f, 0.05f, 2, TUNE_RULE_NONE },
-    { "lost max m",   &pathFollowConfig.lost_max_dist_m,   0.10f, 2.00f, 0.05f, 2, TUNE_RULE_NONE },
-    { "finish m",     &pathFollowConfig.finish_dist_m,     0.02f, 0.50f, 0.01f, 2, TUNE_RULE_NONE }
+    { "start max m", "Maximum allowed distance from vehicle to trajectory start", &pathFollowConfig.start_max_dist_m,  0.05f, 1.50f, 0.05f, 2, TUNE_RULE_NONE },
+    { "lost max m",  "Stop following when distance to path exceeds this value",   &pathFollowConfig.lost_max_dist_m,   0.10f, 2.00f, 0.05f, 2, TUNE_RULE_NONE },
+    { "finish m",    "Finish threshold distance to the final trajectory point",   &pathFollowConfig.finish_dist_m,     0.02f, 0.50f, 0.01f, 2, TUNE_RULE_NONE }
 };
 
 static const TuneItem_t tune_lookahead[] = {
-    { "base m",       &pathFollowConfig.lookahead_base_m,  0.05f, 1.20f, 0.01f, 2, TUNE_RULE_NONE },
-    { "gain",         &pathFollowConfig.lookahead_gain,    0.00f, 2.00f, 0.05f, 2, TUNE_RULE_NONE },
-    { "min m",        &pathFollowConfig.lookahead_min_m,   0.05f, 1.00f, 0.01f, 2, TUNE_RULE_LOOKAHEAD_MIN },
-    { "max m",        &pathFollowConfig.lookahead_max_m,   0.10f, 2.00f, 0.01f, 2, TUNE_RULE_LOOKAHEAD_MAX }
+    { "base m", "Base pure pursuit lookahead distance before speed gain", &pathFollowConfig.lookahead_base_m,  0.05f, 1.20f, 0.01f, 2, TUNE_RULE_NONE },
+    { "gain",   "Additional lookahead distance per vehicle speed",        &pathFollowConfig.lookahead_gain,    0.00f, 2.00f, 0.05f, 2, TUNE_RULE_NONE },
+    { "min m",  "Lower clamp for dynamic lookahead distance",             &pathFollowConfig.lookahead_min_m,   0.05f, 1.00f, 0.01f, 2, TUNE_RULE_LOOKAHEAD_MIN },
+    { "max m",  "Upper clamp for dynamic lookahead distance",             &pathFollowConfig.lookahead_max_m,   0.10f, 2.00f, 0.01f, 2, TUNE_RULE_LOOKAHEAD_MAX }
 };
 
 static const TuneItem_t tune_control[] = {
-    { "pp gain",      &pathFollowConfig.pp_duty_per_curvature, 0.00f, 400.0f, 5.0f, 1, TUNE_RULE_NONE },
-    { "lat kp",       &pathFollowConfig.lat_kp_duty_per_m,     0.00f, 600.0f, 5.0f, 1, TUNE_RULE_NONE },
-    { "yaw kp",       &pathFollowConfig.yaw_kp_duty_per_rad,   0.00f, 400.0f, 5.0f, 1, TUNE_RULE_NONE },
-    { "lat ki",       &pathFollowConfig.lat_ki_duty_per_m_s,   0.00f, 150.0f, 1.0f, 1, TUNE_RULE_NONE },
-    { "lat kd",       &pathFollowConfig.lat_kd_duty_per_mps,   0.00f, 100.0f, 1.0f, 1, TUNE_RULE_NONE },
-    { "lat i lim",    &pathFollowConfig.lat_integral_limit_m_s,0.00f, 2.00f, 0.05f, 2, TUNE_RULE_NONE },
-    { "i min speed",  &pathFollowConfig.integral_min_speed_mps,0.00f, 0.30f, 0.01f, 2, TUNE_RULE_NONE },
-    { "steer slew",   &pathFollowConfig.steer_slew_duty_per_s, 100.0f, 3000.0f, 50.0f, 0, TUNE_RULE_NONE }
+    { "pp gain",     "Steering duty gain from pure pursuit curvature",       &pathFollowConfig.pp_duty_per_curvature, 0.00f, 400.0f, 5.0f, 1, TUNE_RULE_NONE },
+    { "lat kp",      "Lateral error proportional steering gain",             &pathFollowConfig.lat_kp_duty_per_m,     0.00f, 600.0f, 5.0f, 1, TUNE_RULE_NONE },
+    { "yaw kp",      "Heading error proportional steering gain",             &pathFollowConfig.yaw_kp_duty_per_rad,   0.00f, 400.0f, 5.0f, 1, TUNE_RULE_NONE },
+    { "lat ki",      "Lateral error integral steering gain",                 &pathFollowConfig.lat_ki_duty_per_m_s,   0.00f, 150.0f, 1.0f, 1, TUNE_RULE_NONE },
+    { "lat kd",      "Lateral error derivative steering gain",               &pathFollowConfig.lat_kd_duty_per_mps,   0.00f, 100.0f, 1.0f, 1, TUNE_RULE_NONE },
+    { "lat i lim",   "Clamp for lateral integral accumulator",               &pathFollowConfig.lat_integral_limit_m_s,0.00f, 2.00f, 0.05f, 2, TUNE_RULE_NONE },
+    { "i min speed", "Minimum speed before lateral integral accumulates",     &pathFollowConfig.integral_min_speed_mps,0.00f, 0.30f, 0.01f, 2, TUNE_RULE_NONE },
+    { "steer slew",  "Maximum steering duty change speed",                   &pathFollowConfig.steer_slew_duty_per_s, 100.0f, 3000.0f, 50.0f, 0, TUNE_RULE_NONE }
 };
 
 static const TuneItem_t tune_speed[] = {
-    { "v max",        &pathFollowConfig.v_max_mps,               0.05f, 1.00f, 0.01f, 2, TUNE_RULE_NONE },
-    { "a lat max",    &pathFollowConfig.a_lat_max_mps2,          0.02f, 0.60f, 0.01f, 2, TUNE_RULE_NONE },
-    { "end slow m",   &pathFollowConfig.end_slow_dist_m,         0.10f, 2.50f, 0.05f, 2, TUNE_RULE_NONE },
-    { "speed kp",     &pathFollowConfig.speed_kp_duty_per_mps,   0.00f, 150.0f, 1.0f, 1, TUNE_RULE_NONE },
-    { "speed ki",     &pathFollowConfig.speed_ki_duty_per_m,     0.00f, 80.0f,  1.0f, 1, TUNE_RULE_NONE },
-    { "speed i lim",  &pathFollowConfig.speed_integral_limit_m,  0.00f, 2.00f, 0.05f, 2, TUNE_RULE_NONE },
-    { "motor max",    &pathFollowConfig.motor_duty_max,          0.00f, 35.0f, 0.5f, 1, TUNE_RULE_NONE }
+    { "v max",       "Maximum autonomous path-following reference speed in m/s", &pathFollowConfig.v_max_mps,               0.05f, 1.00f, 0.01f, 2, TUNE_RULE_NONE },
+    { "a lat max",   "Curve speed limit from maximum lateral acceleration",      &pathFollowConfig.a_lat_max_mps2,          0.02f, 0.60f, 0.01f, 2, TUNE_RULE_NONE },
+    { "end slow m",  "Distance before endpoint where reference speed slows",     &pathFollowConfig.end_slow_dist_m,         0.10f, 2.50f, 0.05f, 2, TUNE_RULE_NONE },
+    { "speed kp",    "Speed PI proportional gain for motor duty",                &pathFollowConfig.speed_kp_duty_per_mps,   0.00f, 150.0f, 1.0f, 1, TUNE_RULE_NONE },
+    { "speed ki",    "Speed PI integral gain for persistent speed error",        &pathFollowConfig.speed_ki_duty_per_m,     0.00f, 80.0f,  1.0f, 1, TUNE_RULE_NONE },
+    { "speed i lim", "Clamp for speed integral accumulator",                     &pathFollowConfig.speed_integral_limit_m,  0.00f, 2.00f, 0.05f, 2, TUNE_RULE_NONE },
+    { "motor max",   "Maximum motor duty during autonomous path following",      &pathFollowConfig.motor_duty_max,          0.00f, 35.0f, 0.5f, 1, TUNE_RULE_NONE }
 };
 
 static const TuneCategoryInfo_t tune_categories[TUNE_CAT_COUNT] = {
-    { "Safety",    tune_safety,    (uint8)ARRAY_SIZE(tune_safety)    },
-    { "Lookahead", tune_lookahead, (uint8)ARRAY_SIZE(tune_lookahead) },
-    { "Control",   tune_control,   (uint8)ARRAY_SIZE(tune_control)   },
-    { "Speed",     tune_speed,     (uint8)ARRAY_SIZE(tune_speed)     }
+    { "Safety",    "Start lost path and finish distance limits",              tune_safety,    (uint8)ARRAY_SIZE(tune_safety)    },
+    { "Lookahead", "Pure pursuit lookahead distance settings",                tune_lookahead, (uint8)ARRAY_SIZE(tune_lookahead) },
+    { "Control",   "Lateral yaw integral derivative and steering gains",      tune_control,   (uint8)ARRAY_SIZE(tune_control)   },
+    { "Speed",     "Target speed curve slowdown speed PI and motor limit",    tune_speed,     (uint8)ARRAY_SIZE(tune_speed)     }
 };
 
-static const char *system_items[] = {
-    "WiFi reconnect",
-    "IMU cal+zero",
-    "Safety stop",
-    "Reset tune",
-    "Center steer"
+static const MenuTextItem_t system_items[] = {
+    { "WiFi reconnect", "Try STA AP TCP and transparent serial network setup" },
+    { "IMU cal+zero",   "Calibrate accelerometer then zero XY angle and Z yaw" },
+    { "Safety stop",    "Stop path following set motor zero and center steering" },
+    { "Reset tune",     "Restore RAM tuning parameters to macro defaults" },
+    { "Center steer",   "Center steering output when path following is stopped" }
 };
 
 static MenuPage_t menu_page = MENU_PAGE_MAIN;
@@ -342,6 +359,7 @@ static uint8 menu_param_cat = 0;
 static uint8 menu_param_sel = 0;
 static uint8 menu_param_detail = FALSE;
 static uint8 menu_param_scroll[PARAM_CAT_COUNT] = { 0 };
+static uint8 menu_param_item_sel[PARAM_CAT_COUNT] = { 0 };
 static uint8 menu_tune_cat = 0;
 static uint8 menu_tune_sel[TUNE_CAT_COUNT] = { 0 };
 static uint8 menu_tune_detail = FALSE;
@@ -362,6 +380,9 @@ static void menuSetMessage(const char *text);
 static void menuRender(uint8 full_redraw);
 static void menuRefreshLiveValues(void);
 static void menuRefreshFooter(void);
+static const TuneItem_t *menuCurrentTuneItem(void);
+static const char *menuCurrentDesc(void);
+static void menuDrawInfoPanel(const char *desc);
 static void menuHandleKeys(KeyEvent_t events[]);
 
 static uint8 menuStrLen(const char *text)
@@ -884,11 +905,180 @@ static void menuDrawFooter(const char *hint)
     }
 }
 
+static uint8 menuIsTrailingPunctuation(char ch)
+{
+    return (ch == '.' || ch == ',' || ch == ';' ||
+            ch == ':' || ch == '!' || ch == '?') ? TRUE : FALSE;
+}
+
+static void menuPrepareDesc(char *dst, uint8 dst_size, const char *src)
+{
+    uint8 len = 0;
+
+    if (src == NULL)
+    {
+        src = "";
+    }
+
+    menuCopyText(dst, dst_size, src);
+    len = menuStrLen(dst);
+
+    while (len > 0u &&
+           (dst[len - 1u] == ' ' || menuIsTrailingPunctuation(dst[len - 1u])))
+    {
+        --len;
+        dst[len] = '\0';
+    }
+}
+
+static const char *menuCopyWrappedLine(const char *src, char *line, uint8 width)
+{
+    uint8 i = 0;
+    uint8 copy_len = 0;
+    uint8 last_space = 255u;
+
+    while (*src == ' ')
+    {
+        ++src;
+    }
+
+    while (src[i] != '\0' && i < width)
+    {
+        if (src[i] == ' ')
+        {
+            last_space = i;
+        }
+        ++i;
+    }
+
+    if (src[i] == '\0')
+    {
+        copy_len = i;
+    }
+    else if (last_space != 255u && last_space > 0u)
+    {
+        copy_len = last_space;
+    }
+    else
+    {
+        copy_len = i;
+    }
+
+    for (i = 0; i < copy_len; ++i)
+    {
+        line[i] = src[i];
+    }
+    line[copy_len] = '\0';
+
+    src += copy_len;
+    while (*src == ' ')
+    {
+        ++src;
+    }
+
+    return src;
+}
+
+static void menuDrawInfoFrame(void)
+{
+    uint16 x0 = 0u;
+    uint16 x1 = (uint16)(MENU_COLS * 8u - 1u);
+    uint16 y0 = (uint16)(MENU_INFO_FIRST_ROW * MENU_ROW_H - 1u);
+    uint16 y1 = (uint16)((MENU_INFO_LAST_ROW + 1u) * MENU_ROW_H - 1u);
+
+    ips200_draw_line(x0, y0, x1, y0, MENU_COLOR_DIM);
+    ips200_draw_line(x0, y1, x1, y1, MENU_COLOR_DIM);
+    ips200_draw_line(x0, y0, x0, y1, MENU_COLOR_DIM);
+    ips200_draw_line(x1, y0, x1, y1, MENU_COLOR_DIM);
+}
+
+static void menuDrawInfoPanel(const char *desc)
+{
+    char text[MENU_DESC_BUF_LEN];
+    char line[MENU_INFO_TEXT_COLS + 1u];
+    const char *p = NULL;
+    uint8 row = 0;
+
+    for (row = MENU_INFO_TITLE_ROW; row <= MENU_INFO_LAST_ROW; ++row)
+    {
+        menuDrawRow(row, MENU_COLOR_FG, MENU_COLOR_BG, "");
+    }
+
+    menuDrawTextCell(MENU_INFO_TITLE_ROW,
+                     MENU_INFO_TITLE_COL,
+                     MENU_INFO_TITLE_COLS,
+                     MENU_COLOR_SELECT_FG,
+                     MENU_COLOR_SELECT_BG,
+                     " Information ");
+
+    menuPrepareDesc(text, (uint8)sizeof(text), desc);
+    p = text;
+
+    for (row = MENU_INFO_FIRST_ROW; row <= MENU_INFO_LAST_ROW; ++row)
+    {
+        line[0] = '\0';
+        if (*p != '\0')
+        {
+            p = menuCopyWrappedLine(p, line, MENU_INFO_TEXT_COLS);
+        }
+
+        menuDrawTextCell(row,
+                         MENU_INFO_TEXT_COL,
+                         MENU_INFO_TEXT_COLS,
+                         MENU_COLOR_FG,
+                         MENU_COLOR_BG,
+                         line);
+    }
+
+    menuDrawInfoFrame();
+}
+
 static void menuSetMessage(const char *text)
 {
     menuCopyText(menu_message, (uint8)sizeof(menu_message), text);
     menu_message_tick = MENU_MESSAGE_TICKS;
     menu_need_footer_redraw = TRUE;
+}
+
+static void menuEnsureParamSelectionVisible(uint8 cat_index)
+{
+    const ParamCategoryInfo_t *cat = &param_categories[cat_index];
+    uint8 visible_count = (uint8)(MENU_BODY_LAST_ROW - MENU_BODY_FIRST_ROW + 1u);
+    uint8 max_scroll = 0;
+    uint8 sel = menu_param_item_sel[cat_index];
+
+    if (cat->count == 0u)
+    {
+        menu_param_item_sel[cat_index] = 0;
+        menu_param_scroll[cat_index] = 0;
+        return;
+    }
+
+    if (sel >= cat->count)
+    {
+        sel = (uint8)(cat->count - 1u);
+        menu_param_item_sel[cat_index] = sel;
+    }
+
+    if (cat->count > visible_count)
+    {
+        max_scroll = (uint8)(cat->count - visible_count);
+    }
+
+    if (menu_param_scroll[cat_index] > max_scroll)
+    {
+        menu_param_scroll[cat_index] = max_scroll;
+    }
+
+    if (sel < menu_param_scroll[cat_index])
+    {
+        menu_param_scroll[cat_index] = sel;
+    }
+
+    if (sel >= (uint8)(menu_param_scroll[cat_index] + visible_count))
+    {
+        menu_param_scroll[cat_index] = (uint8)(sel - visible_count + 1u);
+    }
 }
 
 static void menuNextParamCategory(void)
@@ -899,7 +1089,7 @@ static void menuNextParamCategory(void)
         menu_param_cat = 0;
     }
     menu_param_sel = menu_param_cat;
-    menu_param_scroll[menu_param_cat] = 0;
+    menuEnsureParamSelectionVisible(menu_param_cat);
     menu_need_full_redraw = TRUE;
 }
 
@@ -914,7 +1104,7 @@ static void menuPrevParamCategory(void)
         --menu_param_cat;
     }
     menu_param_sel = menu_param_cat;
-    menu_param_scroll[menu_param_cat] = 0;
+    menuEnsureParamSelectionVisible(menu_param_cat);
     menu_need_full_redraw = TRUE;
 }
 
@@ -951,6 +1141,81 @@ static const TuneItem_t *menuCurrentTuneItem(void)
         return NULL;
     }
     return &cat->items[sel];
+}
+
+static const char *menuCurrentDesc(void)
+{
+    const TuneItem_t *tune_item = NULL;
+    const ParamCategoryInfo_t *param_cat = NULL;
+    const TrajectoryPreset_t *preset = NULL;
+    uint8 sel = 0;
+
+    if (menu_edit_mode == MENU_EDIT_NUMERIC || menu_edit_mode == MENU_EDIT_STEP)
+    {
+        tune_item = menuCurrentTuneItem();
+        return (tune_item != NULL) ? tune_item->desc : "Edit the selected tuning value in RAM";
+    }
+
+    switch (menu_page)
+    {
+        case MENU_PAGE_MAIN:
+            if (menu_main_sel < ARRAY_SIZE(main_items))
+            {
+                return main_items[menu_main_sel].desc;
+            }
+            break;
+
+        case MENU_PAGE_PARAMS:
+            if (menu_param_detail)
+            {
+                param_cat = &param_categories[menu_param_cat];
+                sel = menu_param_item_sel[menu_param_cat];
+                if (sel < param_cat->count)
+                {
+                    return param_cat->items[sel].desc;
+                }
+            }
+            else if (menu_param_cat < PARAM_CAT_COUNT)
+            {
+                return param_categories[menu_param_cat].desc;
+            }
+            break;
+
+        case MENU_PAGE_TUNE:
+            if (menu_tune_detail)
+            {
+                tune_item = menuCurrentTuneItem();
+                return (tune_item != NULL) ? tune_item->desc : "Edit the selected tuning value in RAM";
+            }
+            if (menu_tune_cat < TUNE_CAT_COUNT)
+            {
+                return tune_categories[menu_tune_cat].desc;
+            }
+            break;
+
+        case MENU_PAGE_TRAJECTORY:
+            preset = trajectoryGetPreset(pathFollower.selected_index);
+            if (preset != NULL)
+            {
+                return preset->desc;
+            }
+            return "Select a preset trajectory then start or preview it";
+
+        case MENU_PAGE_SYSTEM:
+            if (menu_system_sel < ARRAY_SIZE(system_items))
+            {
+                return system_items[menu_system_sel].desc;
+            }
+            break;
+
+        case MENU_PAGE_PREVIEW:
+            return "Green marker is start red marker is end with global X up and Y left";
+
+        default:
+            break;
+    }
+
+    return "";
 }
 
 static float menuClipFloat(float value, float min_value, float max_value)
@@ -1420,7 +1685,6 @@ static void menuHandleMainKeys(KeyEvent_t events[])
 static void menuHandleParamsKeys(KeyEvent_t events[])
 {
     const ParamCategoryInfo_t *cat = &param_categories[menu_param_cat];
-    uint8 max_scroll = 0;
 
     if (!menu_param_detail)
     {
@@ -1453,7 +1717,7 @@ static void menuHandleParamsKeys(KeyEvent_t events[])
         if (events[4] == KEY_SHORT)
         {
             menu_param_detail = TRUE;
-            menu_param_scroll[menu_param_cat] = 0;
+            menuEnsureParamSelectionVisible(menu_param_cat);
             menu_need_full_redraw = TRUE;
         }
 
@@ -1465,25 +1729,22 @@ static void menuHandleParamsKeys(KeyEvent_t events[])
         return;
     }
 
-    if (cat->count > (uint8)(MENU_BODY_LAST_ROW - MENU_BODY_FIRST_ROW + 1u))
-    {
-        max_scroll = (uint8)(cat->count - (MENU_BODY_LAST_ROW - MENU_BODY_FIRST_ROW + 1u));
-    }
-
     if (events[1] == KEY_SHORT || events[1] == KEY_LONG)
     {
-        if (menu_param_scroll[menu_param_cat] > 0u)
+        if (menu_param_item_sel[menu_param_cat] > 0u)
         {
-            --menu_param_scroll[menu_param_cat];
+            --menu_param_item_sel[menu_param_cat];
+            menuEnsureParamSelectionVisible(menu_param_cat);
             menu_need_redraw = TRUE;
         }
     }
 
     if (events[7] == KEY_SHORT || events[7] == KEY_LONG)
     {
-        if (menu_param_scroll[menu_param_cat] < max_scroll)
+        if ((uint8)(menu_param_item_sel[menu_param_cat] + 1u) < cat->count)
         {
-            ++menu_param_scroll[menu_param_cat];
+            ++menu_param_item_sel[menu_param_cat];
+            menuEnsureParamSelectionVisible(menu_param_cat);
             menu_need_redraw = TRUE;
         }
     }
@@ -1710,11 +1971,12 @@ static void menuRenderMain(void)
     for (i = 0; i < ARRAY_SIZE(main_items); ++i)
     {
         menuMakeBlank(text);
-        menuPutText(text, 1, main_items[i], 24);
+        menuPutText(text, 1, main_items[i].name, 24);
         menuDrawRow((uint8)(MENU_BODY_FIRST_ROW + i), menu_main_sel == i ? MENU_COLOR_SELECT_FG : MENU_COLOR_FG,
                     menu_main_sel == i ? MENU_COLOR_SELECT_BG : MENU_COLOR_BG, text);
     }
 
+    menuDrawInfoPanel(menuCurrentDesc());
     menuDrawFooter("UP/DN SEL OK ENTER");
 }
 
@@ -1733,6 +1995,7 @@ static void menuRenderParamsList(void)
                           menu_param_cat == i ? TRUE : FALSE, MENU_COLOR_SELECT_BG);
     }
 
+    menuDrawInfoPanel(menuCurrentDesc());
     menuDrawFooter("OK VIEW  L/R CAT  BACK");
 }
 
@@ -1744,6 +2007,9 @@ static void menuRenderParamsDetail(void)
     char title[MENU_COLS + 1];
     char value[18];
 
+    menuEnsureParamSelectionVisible(menu_param_cat);
+    i = menu_param_scroll[menu_param_cat];
+
     menuMakeBlank(title);
     menuPutText(title, 0, "Params ", 7);
     menuPutText(title, 7, cat->name, 18);
@@ -1753,11 +2019,16 @@ static void menuRenderParamsDetail(void)
     while (i < cat->count && row <= MENU_BODY_LAST_ROW)
     {
         menuFormatParamValue(&cat->items[i], value, (uint8)sizeof(value));
-        row = menuDrawNameValue(row, cat->items[i].name, value, FALSE, MENU_COLOR_SELECT_BG);
+        row = menuDrawNameValue(row,
+                                cat->items[i].name,
+                                value,
+                                menu_param_item_sel[menu_param_cat] == i ? TRUE : FALSE,
+                                MENU_COLOR_SELECT_BG);
         ++i;
     }
 
-    menuDrawFooter("L/R PAGE  UP/DN SCROLL");
+    menuDrawInfoPanel(menuCurrentDesc());
+    menuDrawFooter("L/R PAGE  UP/DN SEL");
 }
 
 static void menuRenderTuneList(void)
@@ -1775,6 +2046,7 @@ static void menuRenderTuneList(void)
                           menu_tune_cat == i ? TRUE : FALSE, MENU_COLOR_SELECT_BG);
     }
 
+    menuDrawInfoPanel(menuCurrentDesc());
     menuDrawFooter("OK VIEW  L/R CAT  BACK");
 }
 
@@ -1806,6 +2078,7 @@ static void menuRenderTuneDetail(void)
                                 select_bg);
     }
 
+    menuDrawInfoPanel(menuCurrentDesc());
     if (menu_edit_mode == MENU_EDIT_STEP)
     {
         menuDrawFooter("L/R STEP OK SAVE BACK CAN");
@@ -1836,6 +2109,7 @@ static void menuRenderNumeric(void)
         menuDrawNameValue((uint8)(MENU_BODY_FIRST_ROW + 6u), "max", value, FALSE, MENU_COLOR_SELECT_BG);
     }
 
+    menuDrawInfoPanel(menuCurrentDesc());
     menuDrawFooter("K1-9 K11=0 K10=. L12=OK");
 }
 
@@ -1863,7 +2137,7 @@ static void menuRenderTrajectory(void)
         }
     }
 
-    row = 9u;
+    row = 8u;
     row = menuDrawNameValue(row, "status", menuPathStatusText(pathFollower.status), FALSE, MENU_COLOR_SELECT_BG);
     menuFormatUInt(value, (uint8)sizeof(value), (uint32)pathFollower.selected_index);
     row = menuDrawNameValue(row, "selected", value, FALSE, MENU_COLOR_SELECT_BG);
@@ -1885,6 +2159,7 @@ static void menuRenderTrajectory(void)
     {
         menuPutText(title, 0, "OK START  F PREVIEW", 19);
     }
+    menuDrawInfoPanel(menuCurrentDesc());
     menuDrawFooter(title);
 }
 
@@ -1895,10 +2170,17 @@ static void menuRefreshParamsDetailValues(void)
     uint8 i = menu_param_scroll[menu_param_cat];
     char value[18];
 
+    menuEnsureParamSelectionVisible(menu_param_cat);
+    i = menu_param_scroll[menu_param_cat];
+
     while (i < cat->count && row <= MENU_BODY_LAST_ROW)
     {
         menuFormatParamValue(&cat->items[i], value, (uint8)sizeof(value));
-        menuDrawValueOnly(row, cat->items[i].name, value, FALSE, MENU_COLOR_SELECT_BG);
+        menuDrawValueOnly(row,
+                          cat->items[i].name,
+                          value,
+                          menu_param_item_sel[menu_param_cat] == i ? TRUE : FALSE,
+                          MENU_COLOR_SELECT_BG);
         row = menuNextRowForName(row, cat->items[i].name);
         ++i;
     }
@@ -1958,7 +2240,7 @@ static void menuDrawTrajectoryFooter(void)
 static void menuRefreshTrajectoryValues(void)
 {
     char value[18];
-    uint8 row = 9u;
+    uint8 row = 8u;
 
     menuDrawValueOnly(row, "status", menuPathStatusText(pathFollower.status), FALSE, MENU_COLOR_SELECT_BG);
     row = menuNextRowForName(row, "status");
@@ -2008,7 +2290,7 @@ static void menuRefreshFooter(void)
         case MENU_PAGE_PARAMS:
             if (menu_param_detail)
             {
-                menuDrawFooter("L/R PAGE  UP/DN SCROLL");
+                menuDrawFooter("L/R PAGE  UP/DN SEL");
             }
             else
             {
@@ -2056,13 +2338,14 @@ static void menuRenderSystem(void)
     for (i = 0; i < ARRAY_SIZE(system_items); ++i)
     {
         menuMakeBlank(text);
-        menuPutText(text, 1, system_items[i], 26);
+        menuPutText(text, 1, system_items[i].name, 26);
         menuDrawRow((uint8)(MENU_BODY_FIRST_ROW + i),
                     menu_system_sel == i ? MENU_COLOR_SELECT_FG : MENU_COLOR_FG,
                     menu_system_sel == i ? MENU_COLOR_SELECT_BG : MENU_COLOR_BG,
                     text);
     }
 
+    menuDrawInfoPanel(menuCurrentDesc());
     menuDrawFooter("OK RUN  BACK");
 }
 
@@ -2092,7 +2375,7 @@ static void menuRenderPreview(void)
     uint16 rect_x = 8u;
     uint16 rect_y = 32u;
     uint16 rect_w = 224u;
-    uint16 rect_h = 256u;
+    uint16 rect_h = 176u;
     uint16 rect_x2 = (uint16)(rect_x + rect_w - 1u);
     uint16 rect_y2 = (uint16)(rect_y + rect_h - 1u);
     float min_x = 0.0f;
@@ -2126,6 +2409,7 @@ static void menuRenderPreview(void)
     if (points == NULL || count < 2u)
     {
         menuDrawRow(10, MENU_COLOR_ERROR, MENU_COLOR_BG, "No trajectory");
+        menuDrawInfoPanel(menuCurrentDesc());
         menuDrawFooter("BACK EXIT");
         return;
     }
@@ -2178,9 +2462,11 @@ static void menuRenderPreview(void)
     py = menuClampInt16(py, (int16)(rect_y + 1u), (int16)(rect_y2 - 1u));
     menuDrawPreviewMarker(px, py, MENU_COLOR_ERROR);
 
-    ips200_draw_line(206u, 272u, 206u, 244u, MENU_COLOR_AXIS);
-    ips200_draw_line(206u, 272u, 178u, 272u, MENU_COLOR_AXIS);
-    menuDrawRow(18, MENU_COLOR_AXIS, MENU_COLOR_BG, "Axis: +X up  +Y left");
+    ips200_draw_line(206u, 200u, 206u, 176u, MENU_COLOR_AXIS);
+    ips200_draw_line(206u, 200u, 182u, 200u, MENU_COLOR_AXIS);
+    menuDrawPreviewMarker(206, 176, MENU_COLOR_AXIS);
+    menuDrawPreviewMarker(182, 200, MENU_COLOR_AXIS);
+    menuDrawInfoPanel(menuCurrentDesc());
     menuDrawFooter("BACK EXIT");
 }
 

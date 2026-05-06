@@ -50,9 +50,12 @@ static const TrajectoryControlPoint_t trajectory_wide_s_points[TRAJECTORY_WIDE_S
 };
 
 static const TrajectoryPreset_t trajectory_presets[TRAJECTORY_PRESET_COUNT] = {
-    { trajectory_line_points,   (uint8)TRAJECTORY_LINE_POINT_COUNT,   "Line"   },
-    { trajectory_soft_s_points, (uint8)TRAJECTORY_SOFT_S_POINT_COUNT, "Soft S" },
-    { trajectory_wide_s_points, (uint8)TRAJECTORY_WIDE_S_POINT_COUNT, "Wide S" }
+    { trajectory_line_points,   (uint8)TRAJECTORY_LINE_POINT_COUNT,   "Line",
+      "Straight 4 m reference path for basic start and stop tests" },
+    { trajectory_soft_s_points, (uint8)TRAJECTORY_SOFT_S_POINT_COUNT, "Soft S",
+      "Moderate S curve for checking smooth steering and lateral error" },
+    { trajectory_wide_s_points, (uint8)TRAJECTORY_WIDE_S_POINT_COUNT, "Wide S",
+      "Wide S curve with larger lateral swings for tuning speed limits" }
 };
 
 #endif /* CODE_TRAJECTORY_POINTS_H_ */
