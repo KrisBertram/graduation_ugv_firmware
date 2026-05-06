@@ -349,6 +349,8 @@ static uint8 menu_tune_detail = FALSE;
 static uint8 menu_system_sel = 0;
 static uint8 menu_need_full_redraw = TRUE;
 static uint8 menu_need_redraw = TRUE;
+static uint8 menu_need_value_redraw = FALSE;
+static uint8 menu_need_footer_redraw = FALSE;
 static uint8 menu_key12_ignore = FALSE;
 static uint16 menu_refresh_tick = 0;
 static uint16 menu_message_tick = 0;
@@ -360,6 +362,8 @@ static uint8 menu_numeric_has_dot = FALSE;
 
 static void menuSetMessage(const char *text);
 static void menuRender(uint8 full_redraw);
+static void menuRefreshLiveValues(void);
+static void menuRefreshFooter(void);
 static void menuHandleKeys(KeyEvent_t events[]);
 
 static uint8 menuStrLen(const char *text)
@@ -782,6 +786,85 @@ static uint8 menuDrawNameValue(uint8 row,
     return row;
 }
 
+static uint8 menuValueRowForName(uint8 row, const char *name)
+{
+    uint8 name_len = menuStrLen(name);
+
+    if (name_len > MENU_LABEL_COLS && row < MENU_BODY_LAST_ROW)
+    {
+        return (uint8)(row + 1u);
+    }
+    return row;
+}
+
+static uint8 menuNextRowForName(uint8 row, const char *name)
+{
+    uint8 name_len = menuStrLen(name);
+
+    if (row > MENU_BODY_LAST_ROW)
+    {
+        return row;
+    }
+
+    if (name_len > MENU_LABEL_COLS && row < MENU_BODY_LAST_ROW)
+    {
+        return (uint8)(row + 2u);
+    }
+    return (uint8)(row + 1u);
+}
+
+static void menuDrawTextCell(uint8 row,
+                             uint8 col,
+                             uint8 cols,
+                             uint16 fg,
+                             uint16 bg,
+                             const char *text)
+{
+    char line[MENU_COLS + 1];
+    uint8 i = 0;
+
+    if (row >= MENU_ROWS || col >= MENU_COLS || cols == 0u)
+    {
+        return;
+    }
+
+    if ((uint8)(col + cols) > MENU_COLS)
+    {
+        cols = (uint8)(MENU_COLS - col);
+    }
+
+    for (i = 0; i < cols; ++i)
+    {
+        line[i] = ' ';
+    }
+    line[cols] = '\0';
+    menuPutText(line, 0, text, cols);
+
+    ips200_set_color(fg, bg);
+    ips200_show_string((uint16)col * 8u, (uint16)row * MENU_ROW_H, line);
+}
+
+static void menuDrawValueOnly(uint8 row,
+                              const char *name,
+                              const char *value,
+                              uint8 selected,
+                              uint16 selected_bg)
+{
+    uint8 value_row = menuValueRowForName(row, name);
+    uint16 fg = selected ? MENU_COLOR_SELECT_FG : MENU_COLOR_FG;
+    uint16 bg = selected ? selected_bg : MENU_COLOR_BG;
+
+    if (value_row <= MENU_BODY_LAST_ROW)
+    {
+        menuDrawTextCell(value_row,
+                         MENU_VALUE_COL,
+                         (uint8)(MENU_COLS - MENU_VALUE_COL),
+                         fg,
+                         bg,
+                         value);
+    }
+}
+
 static void menuDrawHeader(const char *title)
 {
     char line[MENU_COLS + 1];
@@ -807,7 +890,7 @@ static void menuSetMessage(const char *text)
 {
     menuCopyText(menu_message, (uint8)sizeof(menu_message), text);
     menu_message_tick = MENU_MESSAGE_TICKS;
-    menu_need_redraw = TRUE;
+    menu_need_footer_redraw = TRUE;
 }
 
 static void menuNextParamCategory(void)
@@ -984,7 +1067,7 @@ static void menuStepTuneValue(float delta)
     next_value = menuClipFloat(*(item->value) + delta, item->min_value, item->max_value);
     if (menuApplyTuneValue(item, next_value))
     {
-        menu_need_redraw = TRUE;
+        menu_need_value_redraw = TRUE;
     }
 }
 
@@ -1007,7 +1090,7 @@ static void menuNumericAppend(char ch)
     menu_numeric_buf[menu_numeric_len] = ch;
     ++menu_numeric_len;
     menu_numeric_buf[menu_numeric_len] = '\0';
-    menu_need_redraw = TRUE;
+    menu_need_value_redraw = TRUE;
 }
 
 static uint8 menuNumericIsValid(void)
@@ -1807,6 +1890,163 @@ static void menuRenderTrajectory(void)
     menuDrawFooter(title);
 }
 
+static void menuRefreshParamsDetailValues(void)
+{
+    const ParamCategoryInfo_t *cat = &param_categories[menu_param_cat];
+    uint8 row = MENU_BODY_FIRST_ROW;
+    uint8 i = menu_param_scroll[menu_param_cat];
+    char value[18];
+
+    while (i < cat->count && row <= MENU_BODY_LAST_ROW)
+    {
+        menuFormatParamValue(&cat->items[i], value, (uint8)sizeof(value));
+        menuDrawValueOnly(row, cat->items[i].name, value, FALSE, MENU_COLOR_SELECT_BG);
+        row = menuNextRowForName(row, cat->items[i].name);
+        ++i;
+    }
+}
+
+static void menuRefreshTuneDetailValues(void)
+{
+    const TuneCategoryInfo_t *cat = &tune_categories[menu_tune_cat];
+    uint8 row = MENU_BODY_FIRST_ROW;
+    uint8 i = 0;
+    char value[18];
+    uint16 select_bg = (menu_edit_mode == MENU_EDIT_STEP) ? MENU_COLOR_EDIT_BG : MENU_COLOR_SELECT_BG;
+
+    for (i = 0; i < cat->count && row <= MENU_BODY_LAST_ROW; ++i)
+    {
+        menuFormatFloat(value, (uint8)sizeof(value), *(cat->items[i].value), cat->items[i].decimals);
+        menuDrawValueOnly(row,
+                          cat->items[i].name,
+                          value,
+                          menu_tune_sel[menu_tune_cat] == i ? TRUE : FALSE,
+                          select_bg);
+        row = menuNextRowForName(row, cat->items[i].name);
+    }
+}
+
+static void menuRefreshNumericValues(void)
+{
+    const TuneItem_t *item = menuCurrentTuneItem();
+    char value[18];
+
+    if (item == NULL)
+    {
+        return;
+    }
+
+    menuFormatFloat(value, (uint8)sizeof(value), *(item->value), item->decimals);
+    menuDrawValueOnly((uint8)(MENU_BODY_FIRST_ROW + 1u), "current", value, FALSE, MENU_COLOR_SELECT_BG);
+    menuDrawValueOnly((uint8)(MENU_BODY_FIRST_ROW + 3u), "input", menu_numeric_buf, TRUE, MENU_COLOR_EDIT_BG);
+}
+
+static void menuDrawTrajectoryFooter(void)
+{
+    char title[MENU_COLS + 1];
+
+    menuMakeBlank(title);
+    if (pathFollowerIsRunning())
+    {
+        menuPutText(title, 0, "OK STOP  F PREVIEW OFF", 23);
+    }
+    else
+    {
+        menuPutText(title, 0, "OK START  F PREVIEW", 19);
+    }
+    menuDrawFooter(title);
+}
+
+static void menuRefreshTrajectoryValues(void)
+{
+    char value[18];
+    uint8 row = 9u;
+
+    menuDrawValueOnly(row, "status", menuPathStatusText(pathFollower.status), FALSE, MENU_COLOR_SELECT_BG);
+    row = menuNextRowForName(row, "status");
+
+    menuFormatUInt(value, (uint8)sizeof(value), (uint32)pathFollower.selected_index);
+    menuDrawValueOnly(row, "selected", value, FALSE, MENU_COLOR_SELECT_BG);
+    row = menuNextRowForName(row, "selected");
+
+    menuFormatUInt(value, (uint8)sizeof(value), (uint32)pathFollower.active_index);
+    menuDrawValueOnly(row, "active", value, FALSE, MENU_COLOR_SELECT_BG);
+    row = menuNextRowForName(row, "active");
+
+    menuFormatFloat(value, (uint8)sizeof(value), pathFollower.remaining_s, 3);
+    menuDrawValueOnly(row, "remain m", value, FALSE, MENU_COLOR_SELECT_BG);
+    row = menuNextRowForName(row, "remain m");
+
+    menuFormatFloat(value, (uint8)sizeof(value), pathFollower.e_y, 3);
+    menuDrawValueOnly(row, "e_y", value, FALSE, MENU_COLOR_SELECT_BG);
+    row = menuNextRowForName(row, "e_y");
+
+    menuFormatFloat(value, (uint8)sizeof(value), pathFollower.v_ref, 3);
+    menuDrawValueOnly(row, "v_ref", value, FALSE, MENU_COLOR_SELECT_BG);
+
+    menuDrawTrajectoryFooter();
+}
+
+static void menuRefreshFooter(void)
+{
+    if (menu_edit_mode == MENU_EDIT_NUMERIC)
+    {
+        menuDrawFooter("K1-9 K11=0 K10=. L12=OK");
+        return;
+    }
+
+    if (menu_edit_mode == MENU_EDIT_STEP)
+    {
+        menuDrawFooter("L/R STEP OK SAVE BACK CAN");
+        return;
+    }
+
+    switch (menu_page)
+    {
+        case MENU_PAGE_MAIN:
+            menuDrawFooter("UP/DN SEL OK ENTER");
+            break;
+
+        case MENU_PAGE_PARAMS:
+            if (menu_param_detail)
+            {
+                menuDrawFooter("L/R PAGE  UP/DN SCROLL");
+            }
+            else
+            {
+                menuDrawFooter("OK VIEW  L/R CAT  BACK");
+            }
+            break;
+
+        case MENU_PAGE_TUNE:
+            if (menu_tune_detail)
+            {
+                menuDrawFooter("OK STEP  F NUM  BACK");
+            }
+            else
+            {
+                menuDrawFooter("OK VIEW  L/R CAT  BACK");
+            }
+            break;
+
+        case MENU_PAGE_TRAJECTORY:
+            menuDrawTrajectoryFooter();
+            break;
+
+        case MENU_PAGE_SYSTEM:
+            menuDrawFooter("OK RUN  BACK");
+            break;
+
+        case MENU_PAGE_PREVIEW:
+            menuDrawFooter("BACK EXIT");
+            break;
+
+        default:
+            menuDrawFooter("");
+            break;
+    }
+}
+
 static void menuRenderSystem(void)
 {
     uint8 i = 0;
@@ -1994,6 +2234,33 @@ static void menuRender(uint8 full_redraw)
     }
 }
 
+static void menuRefreshLiveValues(void)
+{
+    if (menu_edit_mode == MENU_EDIT_NUMERIC)
+    {
+        menuRefreshNumericValues();
+        return;
+    }
+
+    if (menu_page == MENU_PAGE_PARAMS && menu_param_detail)
+    {
+        menuRefreshParamsDetailValues();
+        return;
+    }
+
+    if (menu_page == MENU_PAGE_TUNE && menu_tune_detail)
+    {
+        menuRefreshTuneDetailValues();
+        return;
+    }
+
+    if (menu_page == MENU_PAGE_TRAJECTORY)
+    {
+        menuRefreshTrajectoryValues();
+        return;
+    }
+}
+
 static uint8 menuNeedsLiveRefresh(void)
 {
     if (menu_edit_mode != MENU_EDIT_NONE)
@@ -2071,7 +2338,7 @@ void menuGuiTask(void)
         --menu_message_tick;
         if (menu_message_tick == 0u)
         {
-            menu_need_redraw = TRUE;
+            menu_need_footer_redraw = TRUE;
         }
     }
 
@@ -2085,6 +2352,8 @@ void menuGuiTask(void)
         menuRender(TRUE);
         menu_need_full_redraw = FALSE;
         menu_need_redraw = FALSE;
+        menu_need_value_redraw = FALSE;
+        menu_need_footer_redraw = FALSE;
         menu_refresh_tick = 0;
         return;
     }
@@ -2093,6 +2362,22 @@ void menuGuiTask(void)
     {
         menuRender(FALSE);
         menu_need_redraw = FALSE;
+        menu_need_value_redraw = FALSE;
+        menu_need_footer_redraw = FALSE;
+        menu_refresh_tick = 0;
+        return;
+    }
+
+    if (menu_need_footer_redraw)
+    {
+        menuRefreshFooter();
+        menu_need_footer_redraw = FALSE;
+    }
+
+    if (menu_need_value_redraw)
+    {
+        menuRefreshLiveValues();
+        menu_need_value_redraw = FALSE;
         menu_refresh_tick = 0;
         return;
     }
@@ -2103,7 +2388,7 @@ void menuGuiTask(void)
         menu_refresh_tick = 0;
         if (menuNeedsLiveRefresh())
         {
-            menuRender(FALSE);
+            menuRefreshLiveValues();
         }
     }
 }
