@@ -19,7 +19,6 @@
 #define MENU_ROW_H                      (16u)
 #define MENU_VALUE_COL                  (15u)
 #define MENU_LABEL_COLS                 (14u)
-#define MENU_REFRESH_TICKS              (50u)   // 按键扫描 4ms 一次，约 200ms 小范围刷新
 #define MENU_MESSAGE_TICKS              (180u)
 #define MENU_NUMERIC_BUF_LEN            (14u)
 
@@ -352,7 +351,6 @@ static uint8 menu_need_redraw = TRUE;
 static uint8 menu_need_value_redraw = FALSE;
 static uint8 menu_need_footer_redraw = FALSE;
 static uint8 menu_key12_ignore = FALSE;
-static uint16 menu_refresh_tick = 0;
 static uint16 menu_message_tick = 0;
 static char menu_message[MENU_COLS + 1] = { 0 };
 static float menu_edit_original = 0.0f;
@@ -2354,7 +2352,6 @@ void menuGuiTask(void)
         menu_need_redraw = FALSE;
         menu_need_value_redraw = FALSE;
         menu_need_footer_redraw = FALSE;
-        menu_refresh_tick = 0;
         return;
     }
 
@@ -2364,7 +2361,6 @@ void menuGuiTask(void)
         menu_need_redraw = FALSE;
         menu_need_value_redraw = FALSE;
         menu_need_footer_redraw = FALSE;
-        menu_refresh_tick = 0;
         return;
     }
 
@@ -2378,17 +2374,11 @@ void menuGuiTask(void)
     {
         menuRefreshLiveValues();
         menu_need_value_redraw = FALSE;
-        menu_refresh_tick = 0;
         return;
     }
 
-    ++menu_refresh_tick;
-    if (menu_refresh_tick >= MENU_REFRESH_TICKS)
+    if (menuNeedsLiveRefresh())
     {
-        menu_refresh_tick = 0;
-        if (menuNeedsLiveRefresh())
-        {
-            menuRefreshLiveValues();
-        }
+        menuRefreshLiveValues();
     }
 }
