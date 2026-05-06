@@ -204,6 +204,34 @@ typedef enum {
 } PathFollowStatus_t;
 
 typedef struct {
+    float start_max_dist_m;             // 启动时允许离轨迹起点的最大距离，单位 m
+    float lost_max_dist_m;              // 最近轨迹点超过该距离后判定丢线，单位 m
+    float finish_dist_m;                // 距终点小于该距离后停车，单位 m
+
+    float lookahead_base_m;             // 预瞄距离基础值，单位 m
+    float lookahead_gain;               // 预瞄距离速度增益
+    float lookahead_min_m;              // 预瞄距离下限，单位 m
+    float lookahead_max_m;              // 预瞄距离上限，单位 m
+
+    float pp_duty_per_curvature;        // Pure Pursuit 曲率前馈增益，单位 duty/(1/m)
+    float lat_kp_duty_per_m;            // 横向误差 P 增益，单位 duty/m
+    float yaw_kp_duty_per_rad;          // 航向误差 P 增益，单位 duty/rad
+    float lat_ki_duty_per_m_s;          // 横向误差 I 增益，单位 duty/(m*s)
+    float lat_kd_duty_per_mps;          // 横向误差 D 增益，单位 duty/(m/s)
+    float lat_integral_limit_m_s;       // 横向误差积分限幅，单位 m*s
+    float integral_min_speed_mps;       // 允许累计横向积分的最小速度，单位 m/s
+
+    float steer_slew_duty_per_s;        // 舵机 duty 命令变化率限制，单位 duty/s
+    float v_max_mps;                    // 自动跟踪最高目标速度，单位 m/s
+    float a_lat_max_mps2;               // 曲率限速横向加速度上限，单位 m/s^2
+    float end_slow_dist_m;              // 终点前线性减速距离，单位 m
+    float speed_kp_duty_per_mps;        // 速度 P 增益，单位 duty/(m/s)
+    float speed_ki_duty_per_m;          // 速度 I 增益，单位 duty/m
+    float speed_integral_limit_m;       // 速度误差积分限幅，单位 m
+    float motor_duty_max;               // 自动模式电机最大占空比百分比
+} PathFollowConfig_t;
+
+typedef struct {
     uint8 selected_index;       // 当前选中的预置轨迹编号
     uint8 active_index;         // 当前正在运行或最近一次生成的轨迹编号
     uint8 status;               // PathFollowStatus_t
@@ -228,7 +256,9 @@ typedef struct {
 } PathFollowerState_t;
 
 extern volatile PathFollowerState_t pathFollower;
+extern volatile PathFollowConfig_t pathFollowConfig;
 
+void pathFollowConfigResetDefaults(void);
 uint8 pathFollowerSelectPrev(void);
 uint8 pathFollowerSelectNext(void);
 uint8 pathFollowerStart(const volatile CarPoseState *pose);
