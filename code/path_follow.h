@@ -142,7 +142,7 @@
  *   首次上板推荐 0.20~0.30m/s，默认 0.30m/s。
  */
 #ifndef PATH_V_MAX_MPS
-#define PATH_V_MAX_MPS                  (0.30f)
+#define PATH_V_MAX_MPS                  (0.40f)
 #endif
 
 /*
@@ -175,7 +175,7 @@
 #define PATH_SPEED_KP_DUTY_PER_MPS      (35.0f)
 #endif
 #ifndef PATH_SPEED_KI_DUTY_PER_M
-#define PATH_SPEED_KI_DUTY_PER_M        (12.0f)
+#define PATH_SPEED_KI_DUTY_PER_M        (40.0f)
 #endif
 
 /*
@@ -193,7 +193,7 @@
  *   首次上板推荐 8~14，默认 14；确认安全后再逐步增加。
  */
 #ifndef PATH_MOTOR_DUTY_MAX
-#define PATH_MOTOR_DUTY_MAX             (14.0f)
+#define PATH_MOTOR_DUTY_MAX             (40.0f)
 #endif
 
 typedef enum {

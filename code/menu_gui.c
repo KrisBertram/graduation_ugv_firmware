@@ -328,13 +328,13 @@ static const TuneItem_t tune_control[] = {
 };
 
 static const TuneItem_t tune_speed[] = {
-    { "v max",       "Maximum autonomous path-following reference speed in m/s", &pathFollowConfig.v_max_mps,               0.05f, 1.00f, 0.01f, 2, TUNE_RULE_NONE },
-    { "a lat max",   "Curve speed limit from maximum lateral acceleration",      &pathFollowConfig.a_lat_max_mps2,          0.02f, 0.60f, 0.01f, 2, TUNE_RULE_NONE },
-    { "end slow m",  "Distance before endpoint where reference speed slows",     &pathFollowConfig.end_slow_dist_m,         0.10f, 2.50f, 0.05f, 2, TUNE_RULE_NONE },
+    { "v max",       "Maximum autonomous path-following reference speed in m/s", &pathFollowConfig.v_max_mps,               0.05f, 10.00f, 0.01f, 2, TUNE_RULE_NONE },
+    { "a lat max",   "Curve speed limit from maximum lateral acceleration",      &pathFollowConfig.a_lat_max_mps2,          0.02f, 10.00f, 0.01f, 2, TUNE_RULE_NONE },
+    { "end slow m",  "Distance before endpoint where reference speed slows",     &pathFollowConfig.end_slow_dist_m,         0.10f, 10.00f, 0.05f, 2, TUNE_RULE_NONE },
     { "speed kp",    "Speed PI proportional gain for motor duty",                &pathFollowConfig.speed_kp_duty_per_mps,   0.00f, 150.0f, 1.0f, 1, TUNE_RULE_NONE },
     { "speed ki",    "Speed PI integral gain for persistent speed error",        &pathFollowConfig.speed_ki_duty_per_m,     0.00f, 80.0f,  1.0f, 1, TUNE_RULE_NONE },
     { "speed i lim", "Clamp for speed integral accumulator",                     &pathFollowConfig.speed_integral_limit_m,  0.00f, 2.00f, 0.05f, 2, TUNE_RULE_NONE },
-    { "motor max",   "Maximum motor duty during autonomous path following",      &pathFollowConfig.motor_duty_max,          0.00f, 35.0f, 0.5f, 1, TUNE_RULE_NONE }
+    { "motor max",   "Maximum motor duty during autonomous path following",      &pathFollowConfig.motor_duty_max,          0.00f, 100.0f, 0.5f, 1, TUNE_RULE_NONE }
 };
 
 static const TuneCategoryInfo_t tune_categories[TUNE_CAT_COUNT] = {
